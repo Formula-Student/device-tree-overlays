@@ -1,0 +1,32 @@
+// FSx Datalogger Overlay
+
+/dts-v1/;
+/plugin/;
+
+/ {
+	compatible = "toradex,colibri-imx7d-emmc";
+	fragment@0 {
+		target = <&pwm1>;
+		__overlay__ {
+			status = "disabled";
+		};
+	};
+	fragment@1 {
+		target = <&pwm2>;
+		__overlay__ {
+			status = "disabled";
+		};
+	};
+	fragment@2 {
+		target = <&pwm3>;
+		__overlay__{
+			status = "disabled";
+		};
+	};
+	fragment@3 {
+		target = <&pwm4>;
+		__overlay__{
+			status = "disabled";
+		};
+	};
+};
