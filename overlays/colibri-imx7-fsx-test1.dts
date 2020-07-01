@@ -29,4 +29,10 @@
 			status = "disabled";
 		};
 	};
+	fragment@4 {
+		target = <&uart2>;
+		__overlay__{
+			status = "disabled";
+		};
+	};
 };
