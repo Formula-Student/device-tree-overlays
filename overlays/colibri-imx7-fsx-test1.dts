@@ -32,6 +32,7 @@
 	fragment@4 {
 		target = <&uart2>;
 		__overlay__{
+			/delete-property/fsl,uart-has-rtscts;
 			status = "disabled";
 		};
 	};
