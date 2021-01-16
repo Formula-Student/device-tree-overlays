@@ -19,10 +19,6 @@
 	};
 };
 
-&cpu0 {
-	clock-frequency = <792000000>;
-};
-
 &gpio1 {
 	gpio-line-names = "SODIMM_8",
 			  "SODIMM_6",
@@ -162,7 +158,7 @@
 &iomuxc {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_gpio1 &pinctrl_gpio2 &pinctrl_gpio3
-		&pinctrl_gpio4 &pinctrl_gpio5>;
+		&pinctrl_gpio4 &pinctrl_gpio5 &pinctrl_gpio7>;
 
 };
 
@@ -184,5 +180,6 @@
 	non-removable;
 	vmmc-supply = <&reg_module_3v3>;
 	wakeup-source;
+	wifi-host;
 	status = "okay";
 };

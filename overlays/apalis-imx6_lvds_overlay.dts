@@ -1,0 +1,29 @@
+// Enable the LVDS interface on the Apalis iMX6Q. Make sure to also select a valid display configuration.
+
+/dts-v1/;
+/plugin/;
+
+/ {
+	compatible = "toradex,apalis_imx6q";
+};
+
+&backlight {
+	status = "okay";
+};
+
+&ldb {
+	status = "okay";
+
+	lvds-channel@0 {
+		status = "okay";
+	};
+
+	lvds-channel@1 {
+		status = "okay";
+	};
+};
+
+&mxcfb1 {
+	status = "okay";
+};
+

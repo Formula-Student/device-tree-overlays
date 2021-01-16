@@ -22,7 +22,6 @@
 			reg = <1>;
 			clock-frequency = <996000000>;
 			operating-points-v2 = <&cpu0_opp_table>;
-			cpu-idle-states = <&cpu_sleep_wait>;
 		};
 	};
 
@@ -106,15 +105,71 @@
 	};
 };
 
+/delete-node/&csi;
+/delete-node/&video_mux;
+
 &aips2 {
 	pcie_phy: pcie-phy@306d0000 {
 		  compatible = "fsl,imx7d-pcie-phy";
 		  reg = <0x306d0000 0x10000>;
 		  status = "disabled";
 	};
+
+	epdc: epdc@306f0000 {
+		compatible = "fsl,imx7d-epdc";
+		interrupts = <GIC_SPI 117 IRQ_TYPE_LEVEL_HIGH>;
+		reg = <0x306f0000 0x10000>;
+		clocks = <&clks IMX7D_CLK_DUMMY>, <&clks IMX7D_EPDC_PIXEL_ROOT_CLK>;
+		clock-names = "epdc_axi", "epdc_pix";
+		epdc-ram = <&gpr 0x4 30>;
+		qos = <&qosc>;
+		status = "disabled";
+	};
+
+	mipi_csi: mipi-csi@30750000 {
+		compatible = "fsl,imx7d-mipi-csi";
+		reg = <0x30750000 0x10000>;
+		interrupts = <GIC_SPI 25 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&clks IMX7D_MIPI_CSI_ROOT_CLK>,
+				<&clks IMX7D_MIPI_DPHY_ROOT_CLK>;
+		clock-names = "mipi_clk", "phy_clk";
+		mipi-phy-supply = <&reg_1p0d>;
+		csis-phy-reset = <&src 0x28 2>;
+		bus-width = <4>;
+		status = "disabled";
+		/delete-node/ port@0;
+		/delete-node/ port@1;
+	};
+
+	qosc: qosc@307f0000 {
+		compatible = "fsl,imx7d-qosc", "syscon";
+		reg = <0x307f0000 0x4000>;
+	};
 };
 
 &aips3 {
+	mu_lp: mu_lp@30aa0000 {
+		compatible = "fsl,imx7d-mu-lp", "fsl,imx6sx-mu-lp";
+		reg = <0x30aa0000 0x10000>;
+		interrupts = <GIC_SPI 88 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&clks IMX7D_MU_ROOT_CLK>;
+		clock-names = "mu";
+		status = "okay";
+	};
+
+	qspi1: spi@30bb0000 {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		compatible = "fsl,imx7d-qspi";
+		reg = <0x30bb0000 0x10000>, <0x60000000 0x10000000>;
+		reg-names = "QuadSPI", "QuadSPI-memory";
+		interrupts = <GIC_SPI 107 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&clks IMX7D_QSPI_ROOT_CLK>,
+			<&clks IMX7D_QSPI_ROOT_CLK>;
+		clock-names = "qspi_en", "qspi";
+		status = "disabled";
+	};
+
 	usbotg2: usb@30b20000 {
 		compatible = "fsl,imx7d-usb", "fsl,imx27-usb";
 		reg = <0x30b20000 0x200>;
@@ -144,7 +199,7 @@
 			<&clks IMX7D_ENET_AXI_ROOT_CLK>,
 			<&clks IMX7D_ENET2_TIME_ROOT_CLK>,
 			<&clks IMX7D_PLL_ENET_MAIN_125M_CLK>,
-			<&clks IMX7D_ENET_PHY_REF_ROOT_CLK>;
+			<&clks IMX7D_ENET_PHY_REF_ROOT_DIV>;
 		clock-names = "ipg", "ahb", "ptp",
 			"enet_clk_ref", "enet_out";
 		fsl,num-tx-queues = <3>;
@@ -193,6 +248,14 @@
 			 <&src IMX7_RESET_PCIE_CTRL_APPS_TURNOFF>;
 		reset-names = "pciephy", "apps", "turnoff";
 		fsl,imx7d-pcie-phy = <&pcie_phy>;
+		status = "disabled";
+	};
+
+	weim: weim@30bc0000 {
+		compatible = "fsl,imx7d-weim", "fsl,imx6sx-weim", "fsl,imx6q-weim";
+		reg = <0x30bc0000 0x10000>;
+		interrupts = <GIC_SPI 13 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&clks IMX7D_EIM_ROOT_CLK>;
 		status = "disabled";
 	};
 };

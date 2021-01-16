@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2019 Toradex AG
+ * Copyright 2017 Toradex AG
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,41 +22,19 @@
 
 		power {
 			label = "Wake-Up";
-			gpios = <&gpio1 1 GPIO_ACTIVE_HIGH>;
+			gpios = <&gpio1 1 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>;
 			linux,code = <KEY_WAKEUP>;
 			debounce-interval = <10>;
-			wakeup-source;
+			gpio-key,wakeup;
 		};
 	};
 
-	panel_dpi: panel-dpi {
-		compatible = "panel-dpi";
-		backlight = <&bl>;
-		power-supply = <&reg_3v3>;
-
-		width-mm = <115>;
-		height-mm = <86>;
-
-		data-mapping = "bgr666";
-
-		/* VESA DMT v1.13 mode VGA 640x480 60Hz */
-		panel-timing {
-			clock-frequency = <25175000>;
-			hactive = <640>;
-			vactive = <480>;
-			hsync-len = <96>;
-			hfront-porch = <16>;
-			hback-porch = <48>;
-			vsync-len = <2>;
-			vfront-porch = <10>;
-			vback-porch = <33>;
-		};
-
-		port {
-			lcd_panel_in: endpoint {
-				remote-endpoint = <&lcdif_out>;
-			};
-		};
+	extcon_usbc_det: usbc_det {
+		compatible = "linux,extcon-usb-gpio";
+		debounce = <25>;
+		id-gpio = <&gpio7 14 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_usbc_det>;
 	};
 
 	reg_3v3: regulator-3v3 {
@@ -94,10 +72,14 @@
 };
 
 &adc1 {
-	status = "okay";
+	status = "disabled";
 };
 
 &adc2 {
+	status = "disabled";
+};
+
+&epxp {
 	status = "okay";
 };
 
@@ -108,7 +90,7 @@
 		&gpio4 23 GPIO_ACTIVE_HIGH
 	>;
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_ecspi3 &pinctrl_ecspi3_cs>;
+	pinctrl-0 = <&pinctrl_ecspi3 &pinctrl_ecspi3_cs &pinctrl_gpio5>;
 	status = "okay";
 
 	spidev0: spidev@0 {
@@ -134,13 +116,10 @@
 	/* Atmel maxtouch controller */
 	atmel_mxt_ts: atmel_mxt_ts@4a {
 		compatible = "atmel,maxtouch";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_mtouch>;
 		reg = <0x4a>;
 		interrupt-parent = <&gpio2>;
 		interrupts = <15 IRQ_TYPE_EDGE_FALLING>;
-		reset-gpios = <&gpio2 28 GPIO_ACTIVE_HIGH>;
-		status = "okay";
+		status = "disabled";
 	};
 
 	/* M41T0M6 real time clock on carrier board */
@@ -151,29 +130,105 @@
 };
 
 &lcdif {
-	status = "okay";
+	display = <&display0>;
+	status = "disabled";
 
-	port {
-		lcdif_out: endpoint {
-			remote-endpoint = <&lcd_panel_in>;
+	display0: lcd-display {
+		bits-per-pixel = <16>;
+		bus-width = <18>;
+
+		display-timings {
+			native-mode = <&timing_vga>;
+
+			/* Standard VGA timing */
+			timing_vga: 640x480 {
+				clock-frequency = <25175000>;
+				hactive = <640>;
+				vactive = <480>;
+				hback-porch = <40>;
+				hfront-porch = <24>;
+				vback-porch = <32>;
+				vfront-porch = <11>;
+				hsync-len = <96>;
+				vsync-len = <2>;
+
+				de-active = <1>;
+				hsync-active = <0>;
+				vsync-active = <0>;
+				pixelclk-active = <0>;
+			};
+
+			/* WVGA Timing, e.g. EDT ET070080DH6 */
+			timing_wvga: 800x480 {
+				clock-frequency = <33260000>;
+				hactive = <800>;
+				vactive = <480>;
+				hback-porch = <216>;
+				hfront-porch = <40>;
+				vback-porch = <35>;
+				vfront-porch = <10>;
+				hsync-len = <128>;
+				vsync-len = <2>;
+
+				de-active = <1>;
+				hsync-active = <0>;
+				vsync-active = <0>;
+				pixelclk-active = <0>;
+			};
+
+			/* Standard SVGA timing */
+			timing_svga: 800x600 {
+				clock-frequency = <40000000>;
+				hactive = <800>;
+				vactive = <600>;
+				hback-porch = <88>;
+				hfront-porch = <40>;
+				vback-porch = <23>;
+				vfront-porch = <1>;
+				hsync-len = <128>;
+				vsync-len = <4>;
+
+				de-active = <1>;
+				hsync-active = <1>;
+				vsync-active = <1>;
+				pixelclk-active = <0>;
+			};
+
+			/* Standard XGA timing */
+			timing_xga: 1024x768 {
+				clock-frequency = <65000000>;
+				hactive = <1024>;
+				vactive = <768>;
+				hback-porch = <160>;
+				hfront-porch = <24>;
+				vback-porch = <29>;
+				vfront-porch = <3>;
+				hsync-len = <136>;
+				vsync-len = <6>;
+
+				de-active = <1>;
+				hsync-active = <0>;
+				vsync-active = <0>;
+				pixelclk-active = <0>;
+			};
 		};
 	};
 };
 
 &pwm1 {
-	status = "okay";
+	status = "disabled";
 };
 
 &pwm2 {
-	status = "okay";
+	status = "disabled";
 };
 
 &pwm3 {
-	status = "okay";
+	status = "disabled";
 };
 
 &pwm4 {
-	status = "okay";
+	status = "disabled";
 };
 
 &uart1 {
@@ -181,7 +236,7 @@
 };
 
 &uart2 {
-	status = "okay";
+	status = "disabled";
 };
 
 &uart3 {
@@ -189,6 +244,8 @@
 };
 
 &usbotg1 {
+	extcon = <&extcon_usbc_det>,  <&extcon_usbc_det>;
+	vbus-supply = <&reg_usbh_vbus>;
 	status = "okay";
 };
 
@@ -215,7 +272,7 @@
 #endif
 	cd-gpios = <&gpio1 0 GPIO_ACTIVE_LOW>;
 	disable-wp;
-	wakeup-source;
+	enable-sdio-wakeup;
 	keep-power-in-suspend;
 	status = "okay";
 };
@@ -223,11 +280,4 @@
 &iomuxc {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_gpio1 &pinctrl_gpio2 &pinctrl_gpio3 &pinctrl_gpio4>;
-
-	pinctrl_mtouch: mtouch-grp { /* ATMEL MXT TOUCH */
-		fsl,pins = <
-			MX7D_PAD_EPDC_DATA15__GPIO2_IO15        0x74 /* SODIMM 107 */
-			MX7D_PAD_EPDC_BDR0__GPIO2_IO28          0x74 /* SODIMM 106 */
-		>;
-	};
 };

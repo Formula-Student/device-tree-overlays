@@ -1,44 +1,8 @@
+// SPDX-License-Identifier: GPL-2.0 OR X11
 /*
- * Copyright 2014-2017 Toradex AG
+ * Copyright 2014-2020 Toradex
  * Copyright 2012 Freescale Semiconductor, Inc.
  * Copyright 2011 Linaro Ltd.
- *
- * This file is dual-licensed: you can use it either under the terms
- * of the GPL or the X11 license, at your option. Note that this dual
- * licensing only applies to this file, and not this project as a
- * whole.
- *
- *  a) This file is free software; you can redistribute it and/or
- *     modify it under the terms of the GNU General Public License
- *     version 2 as published by the Free Software Foundation.
- *
- *     This file is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
- *
- * Or, alternatively,
- *
- *  b) Permission is hereby granted, free of charge, to any person
- *     obtaining a copy of this software and associated documentation
- *     files (the "Software"), to deal in the Software without
- *     restriction, including without limitation the rights to use,
- *     copy, modify, merge, publish, distribute, sublicense, and/or
- *     sell copies of the Software, and to permit persons to whom the
- *     Software is furnished to do so, subject to the following
- *     conditions:
- *
- *     The above copyright notice and this permission notice shall be
- *     included in all copies or substantial portions of the Software.
- *
- *     THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- *     EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
- *     OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- *     NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
- *     HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
- *     WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- *     FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
- *     OTHER DEALINGS IN THE SOFTWARE.
  */
 
 /dts-v1/;
@@ -46,6 +10,7 @@
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/input/input.h>
 #include <dt-bindings/interrupt-controller/irq.h>
+#include <dt-bindings/pwm/pwm.h>
 #include "imx6q.dtsi"
 #include "imx6qdl-apalis.dtsi"
 
@@ -81,47 +46,6 @@
 		};
 	};
 
-	lcd_display: disp0 {
-		compatible = "fsl,imx-parallel-display";
-		#address-cells = <1>;
-		#size-cells = <0>;
-		interface-pix-fmt = "rgb24";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_ipu1_lcdif>;
-		status = "okay";
-
-		port@0 {
-			reg = <0>;
-
-			lcd_display_in: endpoint {
-				remote-endpoint = <&ipu1_di1_disp1>;
-			};
-		};
-
-		port@1 {
-			reg = <1>;
-
-			lcd_display_out: endpoint {
-				remote-endpoint = <&lcd_panel_in>;
-			};
-		};
-	};
-
-	panel: panel {
-		/*
-		 * edt,et057090dhu: EDT 5.7" LCD TFT
-		 * edt,et070080dh6: EDT 7.0" LCD TFT
-		 */
-		compatible = "edt,et057090dhu";
-		backlight = <&backlight>;
-
-		port {
-			lcd_panel_in: endpoint {
-				remote-endpoint = <&lcd_display_out>;
-			};
-		};
-	};
-
 	leds {
 		compatible = "gpio-leds";
 
@@ -148,19 +72,39 @@
 			gpios = <&gpio2 2 GPIO_ACTIVE_HIGH>;
 		};
 	};
-};
 
-&backlight {
-	brightness-levels = <0 127 191 223 239 247 251 255>;
-	default-brightness-level = <1>;
-	status = "okay";
+	reg_3v3_sw: regulator-3v3-sw {
+		compatible = "regulator-fixed";
+		regulator-name = "3.3V_SW";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-always-on;
+	};
+
+	v4l2_cap_0 {
+		compatible = "fsl,imx6q-v4l2-capture";
+		ipu_id = <0>;
+		csi_id = <0>;
+		mclk_source = <0>;
+		status = "okay";
+	};
+
+	v4l2_cap_2 { // mipi-csi2 camera
+		compatible = "fsl,imx6q-v4l2-capture";
+		ipu_id = <0>;
+		csi_id = <1>;
+		mclk_source = <0>;
+		status = "okay";
+	};
 };
 
 &can1 {
+	xceiver-supply = <&reg_3v3_sw>;
 	status = "okay";
 };
 
 &can2 {
+	xceiver-supply = <&reg_3v3_sw>;
 	status = "okay";
 };
 
@@ -186,13 +130,18 @@
 	};
 };
 
-&hdmi {
-	status = "okay";
-};
-
 /* I2C1_SDA/SCL on MXM3 209/211 (e.g. RTC on carrier board) */
 &i2c1 {
 	status = "okay";
+
+	pcap@10 {
+		/* TouchRevolution Fusion 7 and 10 multi-touch controller */
+		compatible = "touchrevolution,fusion-f0710a";
+		reg = <0x10>;
+		gpios = <&gpio6 10 GPIO_ACTIVE_HIGH /* MXM3 11, Pen down interrupt */
+			 &gpio6  9 GPIO_ACTIVE_HIGH /* MXM3 13, Reset */
+			>;
+	};
 
 	/* M41T0M6 real time clock on carrier board */
 	rtc_i2c: rtc@68 {
@@ -207,13 +156,85 @@
  */
 &i2c3 {
 	status = "okay";
+
+	adv7280: adv7280@21 {
+		compatible = "adv7280";
+		reg = <0x21>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ipu1_csi0 &pinctrl_cam_mclk>;
+		clocks = <&clks IMX6QDL_CLK_CKO2>;
+		clock-names = "csi_mclk";
+		DOVDD-supply = <&reg_3p3v>;
+		AVDD-supply = <&reg_3p3v>;
+		DVDD-supply = <&reg_3p3v>;
+		PVDD-supply = <&reg_3p3v>;
+		csi_id = <0>;
+		mclk = <24000000>;
+		mclk_source = <1>;
+		status = "okay";
+	};
+
+	/* Video ADC on Analog Camera Module */
+	adv7180: adv7180@21 {
+		compatible = "adv,adv7180";
+		reg = <0x21>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ipu1_csi0 &pinctrl_cam_mclk>;
+		clocks = <&clks IMX6QDL_CLK_CKO2>;
+		clock-names = "csi_mclk";
+		DOVDD-supply = <&reg_3p3v>; /* 3.3v */
+		AVDD-supply = <&reg_3p3v>;  /* 1.8v */
+		DVDD-supply = <&reg_3p3v>;  /* 1.8v */
+		PVDD-supply = <&reg_3p3v>;  /* 1.8v */
+		csi_id = <0>;
+		mclk = <24000000>;
+		mclk_source = <1>;
+		cvbs = <1>;
+		status = "disabled";
+	};
+
+	max9526: max9526@20 {
+		compatible = "maxim,max9526";
+		reg = <0x20>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ipu1_csi0 &pinctrl_cam_mclk>;
+		clocks = <&clks IMX6QDL_CLK_CKO2>;
+		clock-names = "csi_mclk";
+		DVDDIO-supply = <&reg_3p3v>; /* 3.3v */
+		AVDD-supply = <&reg_3p3v>;  /* 1.8v */
+		DVDD-supply = <&reg_3p3v>;  /* 1.8v */
+		csi_id = <0>;
+		mclk = <24000000>;
+		mclk_source = <1>;
+		cvbs = <1>;
+		status = "okay";
+	};
+
+	ov5640_mipi@3c {
+		compatible = "ovti,ov564x_mipi";
+		reg = <0x3c>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_cam_mclk>;
+		clocks = <&clks IMX6QDL_CLK_CKO2>;
+		clock-names = "csi_mclk";
+		DOVDD-supply = <&reg_1p8v>;
+		AVDD-supply = <&reg_2p5v>;
+		DVDD-supply = <&reg_1p8v>;
+		pwn-gpios = <&gpio2 5 GPIO_ACTIVE_HIGH>;
+		rst-gpios = <&gpio2 4 GPIO_ACTIVE_LOW>;
+		ipu_id = <0>;
+		csi_id = <1>;
+		mclk = <22000000>;
+		mclk_source = <0>;
+		status = "okay";
+	};
 };
 
-&ipu1_di1_disp1 {
-	remote-endpoint = <&lcd_display_in>;
-};
-
-&ldb {
+&mipi_csi {
+	ipu_id = <0>;
+	csi_id = <1>;
+	v_channel = <0>;
+	lanes = <2>;
 	status = "okay";
 };
 
@@ -222,7 +243,6 @@
 	pinctrl-0 = <&pinctrl_reset_moci>;
 	/* active-high meaning opposite of regular PERST# active-low polarity */
 	reset-gpio = <&gpio1 28 GPIO_ACTIVE_HIGH>;
-	reset-gpio-active-high;
 	status = "okay";
 };
 
@@ -242,11 +262,11 @@
 	status = "okay";
 };
 
-&reg_usb_otg_vbus {
+&reg_usb_host_vbus {
 	status = "okay";
 };
 
-&reg_usb_host_vbus {
+&reg_usb_otg_vbus {
 	status = "okay";
 };
 
@@ -268,10 +288,21 @@
 
 &uart2 {
 	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_uart2_dte &pinctrl_uart24_forceoff>;
+#if 0
+	linux,rs485-enabled-at-boot-time;
+	rs485-rts-active-low;
+	rs485-rx-during-tx;
+#endif
 };
 
 &uart4 {
 	status = "okay";
+	/*
+	 * note that uart4 is only working with pinctrl_uart24_forceoff that is
+	 * already defined in &uart2
+	 */
 };
 
 &uart5 {
@@ -298,13 +329,10 @@
 };
 
 &iomuxc {
-	/*
-	 * Mux the Apalis GPIOs
-	 */
+	/* Mux the Apalis GPIOs */
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_apalis_gpio1 &pinctrl_apalis_gpio2
 		     &pinctrl_apalis_gpio3 &pinctrl_apalis_gpio4
-		     &pinctrl_apalis_gpio5 &pinctrl_apalis_gpio6
 		     &pinctrl_apalis_gpio7 &pinctrl_apalis_gpio8
 		    >;
 
@@ -314,6 +342,12 @@
 			MX6QDL_PAD_SD2_DAT3__GPIO1_IO12 0x1b0b0
 			MX6QDL_PAD_NANDF_D1__GPIO2_IO01 0x1b0b0
 			MX6QDL_PAD_NANDF_D2__GPIO2_IO02 0x1b0b0
+		>;
+	};
+
+	pinctrl_uart24_forceoff: uart24_forceoff {
+		fsl,pins = <
+			MX6QDL_PAD_SD2_CMD__GPIO1_IO11 0x1b0b0
 		>;
 	};
 };
